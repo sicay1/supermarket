@@ -1,3 +1,6 @@
 [submodule "awesomelibrary"]
 	path = awesomelibrary
 	url = https://bitbucket.org/jaredw/awesomelibrary
+[submodule "scripts/awesomelibrary"]
+	path = scripts/awesomelibrary
+	url = https://bitbucket.org/jaredw/awesomelibrary
