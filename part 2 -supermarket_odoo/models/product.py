@@ -6,9 +6,10 @@ from .productCategory import ProductCategory
 class Product(models.Model):
     _name = 'supermarket.product'
     _description = 'Product'
+    
+    category = fields.Many2one("supermarket.ProductCategory",string = "Category")
 
     name = fields.Char('Name')
-    category = fields.Many2one("supermarket.ProductCategory",string = "Category")
     unitPrice = fields.Float('Unit Price')
     
 

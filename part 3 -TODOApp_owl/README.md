@@ -4,7 +4,7 @@
 -   It's seems very like React:
     -   Working with components
     -   Use hooks and states
-    -   It's basiclly JS
+    -   It's basiclly kind of JS
 
 # About the Project:
 
@@ -18,9 +18,9 @@
     -   Boolean field isCompleted
 
 *   We have 2 components:
-    ** App - witch own the state and the data.
-    ** Task - get its data as a prop or validation purpose
-*   We got one more object that holds the actions for add Task, toggle Task and delete Task
+    ** App - Which own the state and the data.
+    ** Task - gets its data as a prop or validation purpose
+*   We have one more object that holds the actions for add Task, toggle Task and delete Task
 
 *   We use lifecycle method mounted for our App component , and hooked it with useRef
 *   We use Store to manage state separately from the user interface

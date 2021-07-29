@@ -5,14 +5,16 @@ from .product import Product
 
 class CartItem(models.Model):
     _name = 'supermarket.cartItem'
-    _description = 'Product'
+    _description = 'cartItem'
 
-    cart = fields.Many2one("supermarket.cart",string = "cart" )
     product = fields.Many2one('supermarket.product',string = "product" )
-    quantity = fields.Integer("quantity")
-    total = fields.Float(compute='_compute_total')
+    cart = fields.Many2one("supermarket.cart",string = "cart" )
     price = fields.Float(related = "supermarket.product.unitPrice",store = True,depends = ["supermarket.product"])
     premium = fields.Boolean(related = 'supermarket.cart.premium',store = True, depends = ['supermarket.cart'])
+
+    
+    quantity = fields.Integer("quantity")
+    total = fields.Float(compute='_compute_total')
 
 
     #self: model CartItem
