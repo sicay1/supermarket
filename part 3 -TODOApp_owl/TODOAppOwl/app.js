@@ -1,173 +1,138 @@
+(function () {
+	const { Component, Store, mount } = owl;
+	const { xml } = owl.tags;
+	const { whenReady } = owl.utils;
+	const { useRef, useDispatch, useState, useStore } = owl.hooks;
+	// -------------------------------------------------------------------------
+	// Store
+	// -------------------------------------------------------------------------
+	const actions = {
+		addTask({ state }, title) {
+			title = title.trim();
+			if (title) {
+				const task = {
+					id: state.nextId++,
+					title: title,
+					isCompleted: false,
+				};
+				state.tasks.push(task);
+			}
+		},
+		toggleTask({ state }, id) {
+			const task = state.tasks.find((t) => t.id === id);
+			task.isCompleted = !task.isCompleted;
+		},
+		deleteTask({ state }, id) {
+			const index = state.tasks.findIndex((t) => t.id === id);
+			state.tasks.splice(index, 1);
+		},
+	};
+	const initialState = {
+		nextId: 1,
+		tasks: [],
+	};
 
-/**
- * This is the javascript code defined in the playground.
- * In a larger application, this code should probably be moved in different
- * sub files.
- */
-function app() {
-  (function () {
-      const { Component } = owl;
-      const { xml } = owl.tags;
-      const { whenReady } = owl.utils;
-      
-      const { useRef, useSubEnv } = owl.hooks;
-  
-      // -------------------------------------------------------------------------
-      // Model
-      // -------------------------------------------------------------------------
-      class TaskModel extends owl.core.EventBus {
-          nextId = 1
-          tasks = [];
-  
-          constructor(tasks) {
-              super()
-              for (let task of tasks) {
-                  this.tasks.push(task);
-                  this.nextId = Math.max(this.nextId, task.id + 1);
-              }
-          }
-  
-          addTask(title) {
-              const newTask = {
-                  id: this.nextId++,
-                  title: title,
-                  isCompleted: false,
-              };
-              this.tasks.unshift(newTask);
-              this.trigger('update');
-          }
-  
-          toggleTask(id) {
-              const task = this.tasks.find(t => t.id === id);
-              task.isCompleted = !task.isCompleted;
-              this.tasks.sort(function (a,b) {
-                  if (a.isCompleted) {
-                      if (b.isCompleted) {
-                          a.title.localeCompare(b.title)
-  		    } else {
-  			return 1;
-  		    }
-  		} else {
-                      if (b.isCompleted) {
-  			return -1;
-  		    } else {
-                          a.title.localeCompare(b.title)
-  		    }
-  		}
-  	    });
-              this.trigger('update')
-          }
-   
-          deleteTask(id) {
-              const index = this.tasks.findIndex(t => t.id === id);
-              this.tasks.splice(index, 1);
-              this.trigger('update');
-          }
-      }
-  
-      class StoredTaskModel extends TaskModel {
-          constructor(storage) {
-              const tasks = storage.getItem("todoapp");
-              super(tasks ? JSON.parse(tasks) : []);
-              this.on('update', this, () => {
-                  storage.setItem("todoapp", JSON.stringify(this.tasks))
-              });
-          }
-      }
-  
-      // -------------------------------------------------------------------------
-      // Task Component
-      // -------------------------------------------------------------------------
-      const TASK_TEMPLATE = xml /* xml */`
+	// -------------------------------------------------------------------------
+	// Task Component
+	// -------------------------------------------------------------------------
+	const TASK_TEMPLATE = xml/* xml */ `
         <div class="task" t-att-class="props.task.isCompleted ? 'done' : ''">
-          <input type="checkbox" t-att-checked="props.task.isCompleted" t-on-click="toggleTask"/>
-          <span><t t-esc="props.task.title"/></span>
-          <span class="delete" t-on-click="deleteTask">🗑</span>
-        </div>`;
-  
-      class Task extends Component {
-          static template = TASK_TEMPLATE;
-      
-          toggleTask() {
-              this.env.model.toggleTask(this.props.task.id);
-          }
-  
-          deleteTask() {
-              this.env.model.deleteTask(this.props.task.id);
-          }
-      }
-  
-      // -------------------------------------------------------------------------
-      // App Component
-      // -------------------------------------------------------------------------
-      const APP_TEMPLATE = xml /* xml */`
-      <div class="todo-app">
-      <input placeholder="Enter a new task" t-on-keyup="addTask" t-ref="add-input"/>  
-      <div class="task-list">
-            <t t-foreach="env.model.tasks" t-as="task" t-key="task.id">
-              <Task task="task"/>
-            </t>
-         </div>
-      </div>`;
-  
-      class App extends Component {
-          static template = APP_TEMPLATE;
-          static components = { Task };
-  
-          inputRef = useRef("add-input");
-          
-          constructor() {
-              super();
-              
-              const model = new StoredTaskModel(this.env.localStorage);
-              model.on('update', this, this.render);
-              useSubEnv({model});
-          }
-  
-          mounted() {
-              this.inputRef.el.focus();
-          }
-  
-          addTask(ev) {
-              // 13 is keycode for ENTER
-              if (ev.keyCode === 13) {
-                  const title = ev.target.value.trim();
-                  ev.target.value = "";
-                  if (title) {
-                      this.env.model.addTask(title);
-                  }
-              }
-          }
-  
-      }
-  
-      // Setup code
-      function setup() {
-        App.env.localStorage = window.localStorage;
-        const app = new App();
-        app.mount(document.body);
-      }
-      
-      whenReady(setup);
-  })();
-}
+        <input type="checkbox" t-att-checked="props.task.isCompleted"
+            t-att-id="props.task.id"
+            t-on-click="dispatch('toggleTask', props.task.id)"/>
+        <label t-att-for="props.task.id"><t t-esc="props.task.title"/></label>
+        <span class="delete" t-on-click="dispatch('deleteTask', props.task.id)">🗑</span>
+    </div>`;
 
-/**
- * Initialization code
- * This code load templates, and make sure everything is properly connected.
- */
-async function start() {
-  let templates;
-  try {
-    templates = await owl.utils.loadFile('app.xml');
-  } catch(e) {
-    console.error(`This app requires a static server.  If you have python installed, try 'python app.py'`);
-    return;
-  }
-  const env = { qweb: new owl.QWeb({templates})};
-  owl.Component.env = env;
-  await owl.utils.whenReady();
-  app();
-}
+	class Task extends Component {
+		static template = TASK_TEMPLATE;
+		static props = ["task"];
+		dispatch = useDispatch();
+	}
 
-start();
+	// -------------------------------------------------------------------------
+	// App Component
+	// -------------------------------------------------------------------------
+	const APP_TEMPLATE = xml/* xml */ `
+        <div class="todo-app">
+        <input placeholder="Enter a new task" t-on-keyup="addTask" t-ref="add-input"/>
+        <div class="task-list">
+            <Task t-foreach="displayedTasks" t-as="task" t-key="task.id" task="task"/>
+        </div>
+        <div class="task-panel" t-if="tasks.length">
+            <div class="task-counter">
+                <t t-esc="displayedTasks.length"/>
+                <t t-if="displayedTasks.length lt tasks.length">
+                    / <t t-esc="tasks.length"/>
+                </t>
+                task(s)
+            </div>
+            <div>
+                <span t-foreach="['all', 'active', 'completed']"
+                    t-as="f" t-key="f"
+                    t-att-class="{active: filter.value===f}"
+                    t-on-click="setFilter(f)"
+                    t-esc="f"/>
+            </div>
+        </div>
+    </div>`;
+
+	class App extends Component {
+		static template = APP_TEMPLATE;
+		static components = { Task };
+
+		inputRef = useRef("add-input");
+		tasks = useStore((state) => state.tasks);
+		filter = useState({ value: "all" });
+		dispatch = useDispatch();
+
+		mounted() {
+			this.inputRef.el.focus();
+		}
+
+		addTask(ev) {
+			// 13 is keycode for ENTER
+			if (ev.keyCode === 13) {
+				this.dispatch("addTask", ev.target.value);
+				ev.target.value = "";
+			}
+		}
+
+		filter = useState({ value: "all" });
+
+		get displayedTasks() {
+			switch (this.filter.value) {
+				case "active":
+					return this.tasks.filter((t) => !t.isCompleted);
+				case "completed":
+					return this.tasks.filter((t) => t.isCompleted);
+				case "all":
+					return this.tasks;
+			}
+		}
+
+		setFilter(filter) {
+			this.filter.value = filter;
+		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Setup code
+	// -------------------------------------------------------------------------
+	function makeStore() {
+		const localState = window.localStorage.getItem("todoapp");
+		const state = localState ? JSON.parse(localState) : initialState;
+		const store = new Store({ state, actions });
+		store.on("update", null, () => {
+			localStorage.setItem("todoapp", JSON.stringify(store.state));
+		});
+		return store;
+	}
+	function setup() {
+		owl.config.mode = "dev";
+		const env = { store: makeStore() };
+		mount(App, { target: document.body, env });
+	}
+
+	whenReady(setup);
+})();
